@@ -1,0 +1,112 @@
+---
+title: "a3_task3_james_gately"
+author: "James Gately"
+date: "10/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+library(kableExtra)
+library(hrbrthemes)
+
+```
+
+## Summary
+
+
+### Read in and clean urchin data
+```{r, warning = FALSE, message = FALSE}
+
+urchins <- read_csv(here::here("data", "urchins.csv")) %>% 
+  clean_names() # here was conflicting with lubridate
+
+```
+
+### Section 1:
+
+#### Exploratory data visualization
+```{r, warning = FALSE, message = FALSE}
+
+# Faceted histrogram
+ggplot(data = urchins, aes(x = size)) +
+  geom_histogram(bins = 15) +
+  facet_wrap(~common_name) +
+  labs(x = "test diameter (cm)", y = "count (n)")
+
+```
+
+```{r, message = FALSE, warning = FALSE}
+
+# Boxplot
+ggplot(data = urchins, aes(x = common_name, y = size)) +
+  geom_boxplot() +
+  labs(x = NULL, y = "test diameter (cm)")
+
+```
+
+#### Descriptive statistics
+```{r, message = FALSE, warning = FALSE}
+
+# Calculate summary statistics
+urchins_stats <- urchins %>% 
+  group_by(common_name) %>% 
+  summarize(mean(size), 
+            median(size), 
+            sd(size), 
+            n()
+            )
+# Create table
+kable(urchins_stats, 
+      col.names = c("Common name", 
+                    "Mean test diameter (cm)", 
+                    "Median test diameter (cm)", 
+                    "Standard deviation (cm)", 
+                    "Sample size (n)"),
+      caption = "**Table 1.** Summary statistics for Santa Barbara urchin data. ") %>% 
+  kable_styling(full_width = FALSE)
+
+```
+
+#### Main takeaways:
+
+We can see that mean test diameters differ between the two species by 3.31 cm -- a percent difference of ~54% -- which suggests that the two populations may have significant differences in their test sizes. The boxplot, which shows non-overlapping median diameter sizes, lends additional support to this argument, but further analysis is needed to confirm whether the two populations truly have significantly different test sizes, as there is still some overlap between the two plots. Interestingly, the red urchins appear to be more normally distributed relative to the purple urchins, but the large sample size supports our application of the Central Limit Theorem: we can assume a normal distribution for both populations.
+
+### Section 2:
+
+#### Wrangling Purple Urchin data
+```{r, message = FALSE, warning = FALSE}
+
+purple_urchins <- urchins %>% 
+  filter(common_name == "Purple Urchin") %>%
+  mutate(date = mdy(date)) %>% 
+  mutate(year = year(date)) %>% 
+  mutate(site_full = case_when(
+    site == "NAPL" ~ "Naples Reef",
+    site == "AQUE" ~ "Arroyo Quemado Reef",
+    site == "CARP" ~ "Carpinteria Reef",
+    site == "MOHK" ~ "Mohawk Reef",
+    site == "IVEE" ~ "Isla Vista Reef"))
+
+purple_urchins_summary <- purple_urchins %>% 
+  group_by(site, year) %>% 
+  count()
+
+```
+
+#### Exploratory data visualization
+```{r, message = FALSE, warning = FALSE}
+
+ggplot(data = purple_urchins_summary, aes(y = site, x = year, fill = n)) +
+  geom_tile(colour = "white") +
+  theme_minimal() +
+  labs(x = NULL, y = NULL)
+
+```
+
+
