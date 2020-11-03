@@ -19,6 +19,7 @@ library(hrbrthemes)
 
 ## Summary
 
+This markdown file completes the third of four assigned tasks for ESM 206 Assignment 3. In it, I wrangle urchin size distribution data gathered by the SBC LTER program (which can be found [HERE](https://sbclter.msi.ucsb.edu/data/catalog/package/?package=knb-lter-sbc.26)) and do some exploratory data visualization on red and purple urchin test sizes.
 
 ### Read in and clean urchin data
 ```{r, warning = FALSE, message = FALSE}

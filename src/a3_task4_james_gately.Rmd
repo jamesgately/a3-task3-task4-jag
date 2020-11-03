@@ -1,0 +1,122 @@
+---
+title: "a3_task4_james_gately"
+author: "James Gately"
+date: "10/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+library(kableExtra)
+library(hrbrthemes)
+
+```
+
+## Summary
+
+This markdown file completes the fourth of four assigned tasks for ESM 206 Assignment 3. In it, I wrangle urchin data gathered by the SBC LTER program (which can be found [HERE](https://sbclter.msi.ucsb.edu/data/catalog/package/?package=knb-lter-sbc.26)) and do some exploratory data visualization for purple urchin test sizes measured at Naples Reef, Santa Barbara during January 2010. Test diameters were measured under two treatments: control (where no giant kelp was removed) and annual (annual kelp removal conducted). I conclude with a statistical analysis of the data subset.
+
+### Read in SBC LTER urchin data
+```{r}
+
+urchins <- read_csv(here::here("data", "urchins.csv")) %>% 
+  clean_names()
+
+# Note: here::here used due to here() conflict between here::here and lubridate::here
+
+```
+
+### Wrangle urchin data
+```{r}
+
+# Only keep purple urchin data from NAPL reef, January 2010
+napl_jan_2010 <- urchins %>% 
+  mutate(date = mdy(date)) %>% 
+  mutate(month = month(date)) %>% 
+  mutate(year = year(date)) %>% 
+  filter(site == "NAPL",
+         common_name == "Purple Urchin",
+         month == 1,
+         year == 2010)
+
+```
+
+### Exploratory data visualization
+
+In this subsection, I will do some exploratory data visualization using histograms and quantile-quantile plots. The goal of this section is to evaluate the normality of purple urchin test size data obtained from Naples Reef, Santa Barbara in January 2010.
+
+##### Histogram:
+```{r}
+
+ggplot(data = napl_jan_2010, aes(x = size, fill = treatment)) +
+  geom_histogram(bins = 10, color = "black", size = .25) +
+  theme_minimal() +
+  labs(x = "Test diameter (cm)", y = "Count") +
+  scale_fill_discrete(name = NULL, labels = c("Annual", "Control"))
+
+```
+
+#### QQ-plot:
+```{r}
+
+  ggplot(data = napl_jan_2010, aes(sample = size)) +
+  geom_qq() +
+  theme_minimal() +
+  facet_wrap(~treatment) +
+  labs(x = "Theoretical", y = "Sample")
+
+```
+
+#### Main takeaways:
+
+From the exploratory graphs above, the urchin samples appear to be normally distributed. Although we do have some empty bins in our histogram, a pattern of normalcy is evident. We also observe that the qq-plots are relatively linear, although we do see a bit of a plateau on the ends of the controls. Based on these visualizations, and applying the Central Limit Theorem based on the large sample size (n > 30), we can assume a normal distribution with relative confidence and analyze our means using a two-sample t-test.
+
+### Statistical analysis
+
+Here, I create a table of summary statistics for purple urchin data collected from Naples Reef, Santa Barbara (January 2010) and perform a two-sample t-test.
+
+#### Summary statistics:
+```{r}
+
+# Calculate statistics
+napl_jan_2010_stats <- napl_jan_2010 %>% 
+  group_by(common_name, treatment) %>% 
+  summarise(mean = mean(size), 
+            sd = sd(size), 
+            n = n()) %>% 
+  mutate(treatment = case_when(
+    treatment == "CONTROL" ~ "Control",
+    treatment == "ANNUAL" ~ "Annual"))
+
+# Create a clean looking graph
+kable(napl_jan_2010_stats, 
+      col.names = c("Common name",
+                    "Treatment",
+                    "Mean test diameter (cm)", 
+                    "Standard deviation (cm)", 
+                    "Sample size (n)"),
+      caption = "**Table 1.** Summary statistics for purple urchins (by treatment) sampled at Naples Reef, Santa Barbara (January 2010). ") %>%
+  collapse_rows() %>% 
+  kable_styling(full_width = FALSE)
+
+```
+
+#### Two-sample t-test:
+```{r}
+
+# Comparing species test diameter means for control treatments
+  
+t.test(size ~ treatment, napl_jan_2010)
+
+```
+
+### Discussion
+
+Mean test diameters for purple urchins in our control (3.73 $\pm$ 0.87 cm, n = 62) were smaller than those in our annual treatment (3.92 $\pm$ 0.97 cm, n = 60) -- a difference of ~5% (values represent mean $\pm$ 1 standard deviation; t(117.7) = 1.15, p = 0.25). These results suggest that the winter removal of giant kelp at Naples Reef plays a role in the test size of purple urchins. Our analysis, however, was based on data obtained during one month in 2010; extending the timeframe of our analysis would allow us to better understand the effect that giant kelp recolonization may have on purple urchins.
+
+Our probability value (p = 0.25) tells us that there is a 2.5% chance that we would find means **at least** as different as those above (see Table 1) by random chance if they were obtained from populations with the same mean test diameter.
